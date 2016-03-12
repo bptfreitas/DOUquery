@@ -12,14 +12,31 @@ import sys
 from bs4 import BeautifulSoup
 from time import time
 from email.mime.text import MIMEText
-from datetime import date
+from datetime import date,timedelta
+
+
+debug = False
+
+def compile_links(html):
+	all_tds = []
+	all_ths = []
+
+	links = ""
+	for th in html.find_all('th'):
+		if 'class' in th.attrs.keys():
+			if th['class'][0]=='data':
+				links+=str(th.contents[1])+'<br/>\n'
+
+	return links
+
+today = date.today()	
 
 parser = argparse.ArgumentParser(description='Verifies if ')
 parser.add_argument('--email', nargs='+', help='email to send notification if query has results',required=True, type=str)
 
 parser.add_argument('--queries', nargs='+', help='text to search for', required=True, type=str)
 
-parser.add_argument('--inidate', nargs='?', help='initial date for the search', default = date.today().strftime("%d/%m"), type=str)
+parser.add_argument('--inidate', nargs='?', help='initial date for the search', default = (date.today()-timedelta(1) ).strftime("%d/%m"), type=str)
 
 parser.add_argument('--enddate', nargs='?', help='end date for the search', default = date.today().strftime("%d/%m"), type=str)
 
@@ -50,10 +67,13 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 # User-Agent
 br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
 
-sys.stdout.write("Queries:\n")	
-body = ''
-matches = 0
+sys.stdout.write("Starting queries ...\n")
+
+message = ''
+total_matches = 0
 for query in args.queries:
+	sys.stdout.write("Querying \"" + query + "\" ... ")
+
 	br.open(url)
 	br.select_form(name='pesquisaAvancada')
 
@@ -75,32 +95,46 @@ for query in args.queries:
 			s = ''.join([ x for x in div.strings])
 			results = prog.search(s)
 			if results!=None:
-				tmp_msg = "\t\"" + query + "\": found " + str(results.group(0)) + "\n"
-				body+=tmp_msg
-				matches+=int(results.group(0))
-			else:
-				tmp_msg = "\t\"" + query + "\": found 0\n"
-			
-			sys.stdout.write(tmp_msg)
+				body = BeautifulSoup(compile_links(html),'html.parser')
+				body.prettify()
+				body = str(body)
 
-if matches>0:
-	msg = MIMEText(body)
+				matches = int(results.group(0))
+			else:
+				body = ""
+				matches = 0
+
+			header = "\tFound " + str(matches) + " matches for query: " + query + "\n"
+
+			sys.stdout.write( str(matches) + " matches \n"  )
+
+			message += header + body
+			
+	if debug:
+		print message
+
+
+if not debug:
+	msg = MIMEText(message)
 
 	# me == the sender's email address
 	# you == the recipient's email address
-	me = "DOUbot.net"
-	you = args.email
+	me = "DOUquery"
+	you = ', '.join(args.email)
 
-	msg['Subject'] = "Found occurences on DOU"
+	print you
+
+	msg['Subject'] = "Results for DOU queries"
 	msg['From'] = me
 	msg['To'] = ', '.join(args.email)
 
-	sys.stdout.write("Found occurences... sending email\n")
+	sys.stdout.write("Sending email ... \n")
 
 	# Send the message via our own SMTP server, but don't include the
 	# envelope header.
 	s = smtplib.SMTP('localhost')
-	s.sendmail(me, you , msg.as_string())
+	r = s.sendmail(me, you , msg.as_string())
+
 	s.quit()
 		
 
