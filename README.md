@@ -16,4 +16,4 @@ $ ./DOUquery --queries "Joãozinho" "Mariazinha" --email eumesmo@exemplo.com
 
 O script por padrão irá buscar ocorrências entre o dia atual e o dia anterior. Para definir o dia inicial, utilize o parâmetro --inidate. Para definir o dia final de buscas, utilize o parâmetro --enddate. Utilize parâmetros no formato "dia/mês". Exemplo:
 
-$ ./DOUquery --queries "Joãozinho" "Mariazinha" --email eumesmo@exemplo.com --inidate "04/02" --inidate "31/03"
+$ ./DOUquery --queries "Joãozinho" "Mariazinha" --email eumesmo@exemplo.com --inidate "04/02" --enddate "31/03"
