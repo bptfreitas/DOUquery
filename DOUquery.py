@@ -14,20 +14,27 @@ from time import time
 from email.mime.text import MIMEText
 from datetime import date,timedelta
 
-
 debug = False
 
 def compile_links(html):
 	all_tds = []
 	all_ths = []
 
-	links = ""
+	links = []
+	data = []
 	for th in html.find_all('th'):
 		if 'class' in th.attrs.keys():
 			if th['class'][0]=='data':
-				links+=str(th.contents[1])+'<br/>\n'
+				#print th.contents[1]['href'].replace('../','http://pesquisa.in.gov.br/imprensa/')
+				th.contents[1]['href']=th.contents[1]['href'].replace('../','http://pesquisa.in.gov.br/imprensa/')
+				links.append(th.contents[1])
 
-	return links
+	for td in html.find_all('td'):
+		if 'class' in td.attrs.keys():
+			if td['class'][0]=='data':
+				data.append( td.children )
+
+	return zip(links,data)
 
 today = date.today()	
 
@@ -71,6 +78,9 @@ sys.stdout.write("Starting queries ...\n")
 
 message = ''
 total_matches = 0
+
+output_html = BeautifulSoup('<html><body></body></html>','html.parser') 
+
 for query in args.queries:
 	sys.stdout.write("Querying \"" + query + "\" ... ")
 
@@ -86,6 +96,7 @@ for query in args.queries:
 	response1 = br.submit()
 
 	html = BeautifulSoup(response1.get_data(),'html.parser')
+	print html.original_encoding
 	#html.prettify()
 
 	prog = re.compile('[0-9]+')
@@ -95,46 +106,70 @@ for query in args.queries:
 			s = ''.join([ x for x in div.strings])
 			results = prog.search(s)
 			if results!=None:
-				body = BeautifulSoup(compile_links(html),'html.parser')
-				body.prettify()
-				body = str(body)
-
-				matches = int(results.group(0))
+				links = compile_links(html)
+				matches = int(results.group(0))			
 			else:
-				body = ""
-				matches = 0
+				links = [ ]
+				matches = 0	
 
-			header = "\tFound " + str(matches) + " matches for query: " + query + "\n"
+			total_matches+=matches
+
+			header = "\tEncontradas " + str(matches) + " ocorrencias para a busca \" " + query + "\"\n"
+
+			#print output_html.prettify()
+
+			output_html.body.append(header)
+			output_html.body.append(output_html.new_tag("br"))
+
+			#print output_html.prettify()
+
+			for (link,desc) in links:
+				output_html.body.append(link)
+				output_html.body.append(output_html.new_tag("br"))
+				for d in desc:
+					output_html.body.append(d)
+				output_html.body.append(output_html.new_tag("br"))
 
 			sys.stdout.write( str(matches) + " matches \n"  )
-
-			message += header + body
 			
 	if debug:
 		print message
 
+#print output_html.prettify()
 
 if not debug:
-	msg = MIMEText(message)
+	login = raw_input("Enter your gmail login: ")
+	password = raw_input("Enter your password: ")
+
+	sys.stdout.write("Sending email ... ")
+
+	msg = MIMEText(str(output_html),'html')
 
 	# me == the sender's email address
 	# you == the recipient's email address
-	me = "DOUquery"
+	me = login
 	you = ', '.join(args.email)
 
 	print you
 
-	msg['Subject'] = "Results for DOU queries"
+	msg['Subject'] = "DOUbot: encontradas " + str(total_matches) + "ocorrencias"
 	msg['From'] = me
 	msg['To'] = ', '.join(args.email)
 
-	sys.stdout.write("Sending email ... \n")
-
 	# Send the message via our own SMTP server, but don't include the
 	# envelope header.
-	s = smtplib.SMTP('localhost')
-	r = s.sendmail(me, you , msg.as_string())
+	# s = smtplib.SMTP('localhost')
+	s = smtplib.SMTP('smtp.gmail.com', 587)
+
+	s.ehlo()
+
+	s.starttls()
+
+	s.login(login,password)
+	r = s.sendmail(me, you, msg.as_string())
 
 	s.quit()
+
+	sys.stdout.write("done\n")
 		
 
