@@ -89,7 +89,7 @@ br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.
 message = ''
 
 if not args.noemail:
-	login = raw_input("Enter your gmail login: ")
+	login = getpass("Enter your gmail login: ")
 	password = getpass("Enter your password: ")
 
 while True:
@@ -98,8 +98,17 @@ while True:
 
 	sys.stdout.write("Starting queries ...\n")
 
-	for query in args.queries:
-		sys.stdout.write("Querying \"" + query + "\" ... ")
+	if args.periodic:
+		inidate=( date.today()-timedelta(seconds=args.period) ).strftime("%d/%m")
+		enddate=date.today().strftime("%d/%m")
+
+		sys.stdout.write("Start date to search: " + str(inidate) + "\n")
+		sys.stdout.write("End date to search: " + str(enddate) + "\n")
+	else:
+		inidate=args.inidate
+		enddate=args.enddate
+
+	for query in args.queries:		
 
 		br.open(url)
 		br.select_form(name='pesquisaAvancada')
@@ -107,9 +116,12 @@ while True:
 		#print br.form
 
 		br['edicao.txtPesquisa']=query
-		br['edicao.dtInicio']=args.inidate
-		br['edicao.dtFim']=args.enddate
+		br['edicao.dtInicio']=inidate
+		br['edicao.dtFim']=enddate
+
 		br.find_control("edicao.jornal").items[0].selected=True
+
+		sys.stdout.write("Querying \"" + query + "\" ... ")
 		response1 = br.submit()
 
 		html = BeautifulSoup(response1.get_data(),'html.parser')
