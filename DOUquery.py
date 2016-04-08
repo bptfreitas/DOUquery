@@ -33,7 +33,7 @@ def compile_links(html):
 	for td in html.find_all('td'):
 		if 'class' in td.attrs.keys():
 			if td['class'][0]=='data':
-				data.append( td.children )
+				data.append( td.contents )
 
 	return zip(links,data)
 
@@ -89,12 +89,12 @@ br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.
 message = ''
 
 if not args.noemail:
-	login = getpass("Enter your gmail login: ")
+	login = raw_input("Enter your gmail login: ")
 	password = getpass("Enter your password: ")
 
 while True:
 	total_matches = 0
-	output_html = BeautifulSoup('<html><body></body></html>','html.parser') 
+	output_html = BeautifulSoup("<html><head><meta charset='iso8959-1' /></head><body></body></html>",'html.parser') 
 
 	sys.stdout.write("Starting queries ...\n")
 
@@ -143,11 +143,13 @@ while True:
 
 				total_matches+=matches
 
-				header = "\tEncontradas " + str(matches) + " ocorrencias para a busca \" " + query + "\"\n"
+				tag=output_html.new_tag("h2")
+				tag.string="Encontradas " + str(matches) + " ocorrencias para a busca \"" + query + "\""
+
+				output_html.body.append(tag)
 
 				#print output_html.prettify()
 
-				output_html.body.append(header)
 				output_html.body.append(output_html.new_tag("br"))
 
 				#print output_html.prettify()
@@ -193,7 +195,7 @@ while True:
 
 		sys.stdout.write("done\n")
 	else:
-		sys.stdout.write(output_html.prettify())
+		sys.stdout.write(output_html.prettify() + "\n")
 		
 
 	if not args.periodic:		
