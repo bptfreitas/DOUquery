@@ -67,12 +67,18 @@ sys.stdout.write("Email to send notification: " + str(args.email) + "\n")
 if args.periodic:
 	sys.stdout.write("Making periodic queries\n")
 else:
-	sys.stdout.write("Start date to search: " + str(args.inidate) + "\n")
-	sys.stdout.write("End date to search: " + str(args.enddate) + "\n")
+	ini_day=args.inidate.split('/')[0]
+	ini_month=args.inidate.split('/')[1]
 
-	if args.enddate<args.inidate:
+	end_day=args.enddate.split('/')[0]
+	end_month=args.enddate.split('/')[1]
+
+	if date(date.today().year,int(end_month),int(end_day))<date(date.today().year,int(ini_month),int(ini_day)):
 		sys.stderr.write("Error: initial date is greater than end date\n")
 		sys.exit(-1)
+
+	sys.stdout.write("Start date to search: " + str(args.inidate) + "\n")
+	sys.stdout.write("End date to search: " + str(args.enddate) + "\n")
 
 
 url = "http://portal.imprensanacional.gov.br"
