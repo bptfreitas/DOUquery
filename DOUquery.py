@@ -9,9 +9,11 @@ import argparse
 import datetime
 import sys
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup,NavigableString
 from time import time,sleep
 from email.mime.text import MIMEText
+from email.header import Header
+
 from datetime import date,timedelta
 from getpass import getpass
 
@@ -23,6 +25,7 @@ def compile_links(html):
 
 	links = []
 	data = []
+
 	for th in html.find_all('th'):
 		if 'class' in th.attrs.keys():
 			if th['class'][0]=='data':
@@ -33,8 +36,11 @@ def compile_links(html):
 	for td in html.find_all('td'):
 		if 'class' in td.attrs.keys():
 			if td['class'][0]=='data':
-				data.append( td.contents )
-
+				tmp = []				
+				for content in td.children:
+					tmp.append(content)
+				data.append(tmp)
+						
 	return zip(links,data)
 
 today = date.today()	
@@ -94,12 +100,12 @@ if not args.noemail:
 
 while True:
 	total_matches = 0
-	output_html = BeautifulSoup("<html><head><meta charset='iso8959-1' /></head><body></body></html>",'html.parser') 
+	output_html = BeautifulSoup("<html><head><meta charset='utf-8' /></head><body></body></html>",'html.parser') 
 
 	sys.stdout.write("Starting queries ...\n")
 
 	if args.periodic:
-		inidate=( date.today()-timedelta(seconds=args.period) ).strftime("%d/%m")
+		inidate=( date.today()+timedelta(seconds=-args.period) ).strftime("%d/%m")
 		enddate=date.today().strftime("%d/%m")
 
 		sys.stdout.write("Start date to search: " + str(inidate) + "\n")
@@ -144,7 +150,7 @@ while True:
 				total_matches+=matches
 
 				tag=output_html.new_tag("h2")
-				tag.string="Encontradas " + str(matches) + " ocorrencias para a busca \"" + query + "\""
+				tag.string="Encontradas " + str(matches) + " ocorrências para a busca \"" + query + "\""
 
 				output_html.body.append(tag)
 
@@ -157,8 +163,12 @@ while True:
 				for (link,desc) in links:
 					output_html.body.append(link)
 					output_html.body.append(output_html.new_tag("br"))
+
+					tag=output_html.new_tag("p")
 					for d in desc:
-						output_html.body.append(d)
+						tag.append(d)											
+					output_html.body.append(tag)
+
 					output_html.body.append(output_html.new_tag("br"))
 
 				sys.stdout.write( str(matches) + " matches \n"  )
@@ -170,12 +180,17 @@ while True:
 
 		msg = MIMEText(str(output_html),'html')
 
+		
+
 		# me == the sender's email address
 		# you == the recipient's email address
 		me = login
 		you = ', '.join(args.email)
+		
+		subject = "DOUbot: encontradas " + str(total_matches) + " ocorrências"
+		h = Header(subject,'utf-8')
 
-		msg['Subject'] = "DOUbot: encontradas " + str(total_matches) + " ocorrências"
+		msg['Subject'] = h
 		msg['From'] = me
 		msg['To'] = ', '.join(args.email)
 
