@@ -148,9 +148,6 @@ while True:
 					output_html.body.append(output_html.new_tag("br"))
 
 				sys.stdout.write( str(matches) + " matches \n"  )
-			
-		if debug:
-			print message
 
 	#print output_html.prettify()
 
@@ -164,7 +161,7 @@ while True:
 		me = login
 		you = ', '.join(args.email)
 
-		msg['Subject'] = "DOUbot: encontradas " + str(total_matches) + "ocorrencias"
+		msg['Subject'] = "DOUbot: encontradas " + str(total_matches) + " ocorrências"
 		msg['From'] = me
 		msg['To'] = ', '.join(args.email)
 
